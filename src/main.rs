@@ -1,5 +1,5 @@
 use enum_iterator::{all, Sequence};
-use rand::{seq::SliceRandom, Rng, SeedableRng};
+use rand::{seq::SliceRandom, SeedableRng};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone, Sequence)]
 enum RegularCardValue {
@@ -205,7 +205,13 @@ impl Hand {
 }
 
 #[derive(PartialEq, Eq, Debug)]
+struct PlayerHand(Vec<Card>);
+
+#[derive(PartialEq, Eq, Debug)]
 struct Deck(Vec<Card>);
+
+const NUM_CARDS_PER_PLAYER: usize = 14;
+const NUM_PLAYERS: usize = 4;
 
 impl Deck {
     fn new<R: rand::RngCore>(rng: &mut R) -> Deck {
@@ -213,12 +219,20 @@ impl Deck {
         cards.as_mut_slice().shuffle(rng);
         Deck(cards)
     }
+
+    fn deal(&mut self) -> PlayerHand {
+        let mut cards = self.0.split_off(self.0.len() - NUM_CARDS_PER_PLAYER);
+        cards.sort_unstable();
+        PlayerHand(cards)
+    }
 }
 
 fn main() {
     let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(10);
-    let deck = Deck::new(&mut rng);
-    println!("Deck: {:?}", deck);
+    let mut deck = Deck::new(&mut rng);
+    for i in 0..NUM_PLAYERS {
+        println!("Player {} is dealt hand {:?}", i, deck.deal());
+    }
     let card1 = Card::RegularCard(RegularCardValue::King, RegularCardSuite::Heart);
     let card2 = Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Clubs);
     let card_one = Card::SpecialCard(SpecialCardType::One);
