@@ -37,6 +37,16 @@ enum Card {
     SpecialCard(SpecialCardType),
 }
 
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+enum HandType {
+    SingleCard,
+    Pair,
+    Triple,
+    Straight,
+    StraightOfPairs,
+    FullHouse,
+}
+
 impl Card {
     fn can_be_played_on_top_of_single_card(&self, other: &Card) -> bool {
         match (self, other) {
@@ -57,7 +67,7 @@ impl Card {
 
             // Any other combination is covered by the reverse. This works because special cards
             // can only occur once.
-            (Card::RegularCard(value, color), other_card) => !other_card.can_be_played_on_top_of_single_card(&Card::RegularCard(*value, *color)),
+            (this_card @ Card::RegularCard(value, color), other_card) => !other_card.can_be_played_on_top_of_single_card(this_card),
 
             _ => panic!()
         }
