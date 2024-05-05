@@ -145,6 +145,7 @@ impl Hand {
             hand if hand.is_valid_pair() => Some(HandType::Pair),
             hand if hand.is_valid_triple() => Some(HandType::Triple),
             hand if hand.is_valid_straight() => Some(HandType::Straight),
+            hand if hand.is_valid_full_house() => Some(HandType::FullHouse),
             _ => None,
         }
     }
@@ -201,6 +202,20 @@ impl Hand {
             })
             .sum();
         self.0.len() >= 5 && num_phoenices >= num_phoenices_needed
+    }
+
+    fn is_valid_full_house(&self) -> bool {
+        match self.0.as_slice() {
+            [Card::RegularCard(value1, _), Card::RegularCard(value2, _), Card::RegularCard(value3, _), Card::RegularCard(value4, _), Card::RegularCard(value5, _)] => {
+                value1 == value2 && value4 == value5 && (value3 == value2 || value3 == value4)
+            }
+            [Card::SpecialCard(SpecialCardType::Phoenix), Card::RegularCard(value1, _), Card::RegularCard(value2, _), Card::RegularCard(value3, _), Card::RegularCard(value4, _)] => {
+                (value1 == value2 && value2 == value3)
+                    || (value1 == value2 && value3 == value4)
+                    || (value2 == value3 && value3 == value4)
+            }
+            _ => false,
+        }
     }
 }
 
