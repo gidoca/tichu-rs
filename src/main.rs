@@ -39,8 +39,8 @@ enum SpecialCardType {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone)]
 enum Card {
-    RegularCard(RegularCardValue, RegularCardSuite),
     SpecialCard(SpecialCardType),
+    RegularCard(RegularCardValue, RegularCardSuite),
 }
 
 impl Card {
@@ -90,6 +90,14 @@ impl Card {
             Card::SpecialCard(SpecialCardType::Phoenix) => true,
             Card::SpecialCard(SpecialCardType::One) => true,
             _ => false,
+        }
+    }
+
+    fn numeric_value(&self) -> Option<usize> {
+        match self {
+            Card::SpecialCard(SpecialCardType::One) => Some(1),
+            Card::RegularCard(value, _) => Some(value.numeric_value()),
+            _ => None,
         }
     }
 
@@ -147,7 +155,7 @@ impl Hand {
             [Card::RegularCard(value1, _), Card::RegularCard(value2, _)] if value1 == value2 => {
                 true
             }
-            [Card::RegularCard(_, _), Card::SpecialCard(SpecialCardType::Phoenix)] => true,
+            [Card::SpecialCard(SpecialCardType::Phoenix), Card::RegularCard(_, _)] => true,
             _ => false,
         }
     }
@@ -159,7 +167,7 @@ impl Hand {
             {
                 true
             }
-            [Card::RegularCard(value1, _), Card::RegularCard(value2, _), Card::SpecialCard(SpecialCardType::Phoenix)]
+            [Card::SpecialCard(SpecialCardType::Phoenix), Card::RegularCard(value1, _), Card::RegularCard(value2, _)]
                 if value1 == value2 =>
             {
                 true
@@ -181,11 +189,12 @@ impl Hand {
             .0
             .as_slice()
             .windows(2)
-            .filter_map(|pair| match pair {
-                [Card::RegularCard(value1, _), Card::RegularCard(value2, _)] => {
-                    Some(value2.numeric_value() - value1.numeric_value() - 1)
-                }
-                _ => None,
+            .filter_map(|cards| match cards {
+                [card1, card2] => match (card1.numeric_value(), card2.numeric_value()) {
+                    (Some(value1), Some(value2)) => Some(value2 - value1 - 1),
+                    _ => None,
+                },
+                _ => panic!(),
             })
             .sum();
         self.0.len() >= 5 && num_phoenices >= num_phoenices_needed
@@ -245,4 +254,13 @@ fn main() {
         Card::SpecialCard(SpecialCardType::Phoenix),
     ]);
     println!("hand {:?} has type {:?}", hand4, hand4.hand_type());
+
+    let hand5 = Hand::new(vec![
+        Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Three, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Five, RegularCardSuite::Heart),
+        Card::SpecialCard(SpecialCardType::One),
+    ]);
+    println!("hand {:?} has type {:?}", hand5, hand5.hand_type());
 }
