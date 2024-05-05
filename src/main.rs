@@ -16,8 +16,8 @@ enum RegularCardValue {
 }
 
 impl RegularCardValue {
-    fn numeric_value(&self) -> isize {
-        *self as isize
+    fn numeric_value(&self) -> usize {
+        *self as usize
     }
 }
 
@@ -84,6 +84,15 @@ impl Card {
         }
     }
 
+    fn is_valid_in_multi_card_hand(&self) -> bool {
+        match self {
+            Card::RegularCard(_, _) => true,
+            Card::SpecialCard(SpecialCardType::Phoenix) => true,
+            Card::SpecialCard(SpecialCardType::One) => true,
+            _ => false,
+        }
+    }
+
     fn score(&self) -> i8 {
         match self {
             Card::RegularCard(RegularCardValue::King, _) => 10,
@@ -106,6 +115,7 @@ enum HandType {
     FullHouse,
 }
 
+#[derive(PartialEq, Eq, Debug)]
 struct Hand(Vec<Card>);
 
 impl Hand {
@@ -115,10 +125,15 @@ impl Hand {
     }
 
     fn hand_type(&self) -> Option<HandType> {
+        if self.0.len() > 1 && !self.0.iter().all(|card| card.is_valid_in_multi_card_hand()) {
+            return None;
+        }
+
         match self {
             hand if hand.is_valid_single_card() => Some(HandType::SingleCard),
             hand if hand.is_valid_pair() => Some(HandType::Pair),
             hand if hand.is_valid_triple() => Some(HandType::Triple),
+            hand if hand.is_valid_straight() => Some(HandType::Straight),
             _ => None,
         }
     }
@@ -152,6 +167,29 @@ impl Hand {
             _ => false,
         }
     }
+
+    fn is_valid_straight(&self) -> bool {
+        let num_phoenices = self
+            .0
+            .iter()
+            .filter(|card| match card {
+                Card::SpecialCard(SpecialCardType::Phoenix) => true,
+                _ => false,
+            })
+            .count();
+        let num_phoenices_needed = self
+            .0
+            .as_slice()
+            .windows(2)
+            .filter_map(|pair| match pair {
+                [Card::RegularCard(value1, _), Card::RegularCard(value2, _)] => {
+                    Some(value2.numeric_value() - value1.numeric_value() - 1)
+                }
+                _ => None,
+            })
+            .sum();
+        self.0.len() >= 5 && num_phoenices >= num_phoenices_needed
+    }
 }
 
 fn main() {
@@ -177,4 +215,34 @@ fn main() {
         card2.can_be_played_on_top_of_single_card(&card_one)
     );
     println!("{:?} scores {:?} points", card1, card1.score());
+
+    let hand = Hand(vec![card1]);
+    println!("hand {:?} has type {:?}", hand, hand.hand_type());
+
+    let hand2 = Hand::new(vec![
+        Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Three, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Five, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Six, RegularCardSuite::Heart),
+    ]);
+    println!("hand {:?} has type {:?}", hand2, hand2.hand_type());
+
+    let hand3 = Hand::new(vec![
+        Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Three, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Five, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Seven, RegularCardSuite::Heart),
+    ]);
+    println!("hand {:?} has type {:?}", hand3, hand3.hand_type());
+
+    let hand4 = Hand::new(vec![
+        Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Three, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Six, RegularCardSuite::Heart),
+        Card::SpecialCard(SpecialCardType::Phoenix),
+    ]);
+    println!("hand {:?} has type {:?}", hand4, hand4.hand_type());
 }
