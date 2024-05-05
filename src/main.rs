@@ -1,18 +1,21 @@
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone)]
+use enum_iterator::{all, Sequence};
+use rand::{seq::SliceRandom, Rng, SeedableRng};
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone, Sequence)]
 enum RegularCardValue {
-    Ace = 14,
-    King = 13,
-    Queen = 12,
-    Jack = 11,
-    Ten = 10,
-    Nine = 9,
-    Eight = 8,
-    Seven = 7,
-    Six = 6,
-    Five = 5,
-    Four = 4,
-    Three = 3,
     Two = 2,
+    Three = 3,
+    Four = 4,
+    Five = 5,
+    Six = 6,
+    Seven = 7,
+    Eight = 8,
+    Nine = 9,
+    Ten = 10,
+    Jack = 11,
+    Queen = 12,
+    King = 13,
+    Ace = 14,
 }
 
 impl RegularCardValue {
@@ -21,7 +24,7 @@ impl RegularCardValue {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone, Sequence)]
 enum RegularCardSuite {
     Heart,
     Diamond,
@@ -29,7 +32,7 @@ enum RegularCardSuite {
     Clubs,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone, Sequence)]
 enum SpecialCardType {
     Dragon,
     Phoenix,
@@ -37,7 +40,7 @@ enum SpecialCardType {
     Dog,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone, Sequence)]
 enum Card {
     SpecialCard(SpecialCardType),
     RegularCard(RegularCardValue, RegularCardSuite),
@@ -201,7 +204,21 @@ impl Hand {
     }
 }
 
+#[derive(PartialEq, Eq, Debug)]
+struct Deck(Vec<Card>);
+
+impl Deck {
+    fn new<R: rand::RngCore>(rng: &mut R) -> Deck {
+        let mut cards = all::<Card>().collect::<Vec<_>>();
+        cards.as_mut_slice().shuffle(rng);
+        Deck(cards)
+    }
+}
+
 fn main() {
+    let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(10);
+    let deck = Deck::new(&mut rng);
+    println!("Deck: {:?}", deck);
     let card1 = Card::RegularCard(RegularCardValue::King, RegularCardSuite::Heart);
     let card2 = Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Clubs);
     let card_one = Card::SpecialCard(SpecialCardType::One);
