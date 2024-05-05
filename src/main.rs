@@ -33,14 +33,14 @@ enum SpecialCardType {
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 enum Card {
-    RegularCard(RegularCardSuite, RegularCardValue),
+    RegularCard(RegularCardValue, RegularCardSuite),
     SpecialCard(SpecialCardType),
 }
 
 impl Card {
     fn can_be_played_on_top_of_single_card(&self, other: &Card) -> bool {
         match (self, other) {
-            (Card::RegularCard(_, self_value), Card::RegularCard(_, other_value)) => self_value > other_value,
+            (Card::RegularCard(self_value, _), Card::RegularCard(other_value ,_)) => self_value > other_value,
 
             (Card::SpecialCard(SpecialCardType::Dragon), _) => true,
 
@@ -57,7 +57,7 @@ impl Card {
 
             // Any other combination is covered by the reverse. This works because special cards
             // can only occur once.
-            (Card::RegularCard(color, value), other_card) => !other_card.can_be_played_on_top_of_single_card(&Card::RegularCard(*color, *value)),
+            (Card::RegularCard(value, color), other_card) => !other_card.can_be_played_on_top_of_single_card(&Card::RegularCard(*value, *color)),
 
             _ => panic!()
         }
@@ -65,9 +65,9 @@ impl Card {
 
     fn score(&self) -> i8 {
         match(self) {
-            Card::RegularCard(_, RegularCardValue::King) => 10,
-            Card::RegularCard(_, RegularCardValue::Ten) => 10,
-            Card::RegularCard(_, RegularCardValue::Five) => 5,
+            Card::RegularCard(RegularCardValue::King, _) => 10,
+            Card::RegularCard(RegularCardValue::Ten, _) => 10,
+            Card::RegularCard(RegularCardValue::Five, _) => 5,
             Card::SpecialCard(SpecialCardType::Dragon) => 25,
             Card::SpecialCard(SpecialCardType::Phoenix) => -25,
             _ => 0,
@@ -76,7 +76,10 @@ impl Card {
 }
 
 fn main() {
-    let card1 = Card::RegularCard(RegularCardSuite::Heart, RegularCardValue::Ace);
-    let card2 = Card::RegularCard(RegularCardSuite::Clubs, RegularCardValue::Four);
+    let card1 = Card::RegularCard(RegularCardValue::King, RegularCardSuite::Heart);
+    let card2 = Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Clubs);
+    let card_one = Card::SpecialCard(SpecialCardType::One);
     println!("{:?} can be played on top of {:?}: {:?}", card1, card2, card1.can_be_played_on_top_of_single_card(&card2));
+    println!("{:?} can be played on top of {:?}: {:?}", card_one, card2, card_one.can_be_played_on_top_of_single_card(&card2));
+    println!("{:?} scores {:?} points", card1, card1.score());
 }
