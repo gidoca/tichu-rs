@@ -1,5 +1,7 @@
 use enum_iterator::{all, Sequence};
+use itertools::Itertools;
 use rand::{seq::SliceRandom, SeedableRng};
+use std::collections::HashMap;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone, Sequence)]
 enum RegularCardValue {
@@ -145,6 +147,7 @@ impl Hand {
             hand if hand.is_valid_pair() => Some(HandType::Pair),
             hand if hand.is_valid_triple() => Some(HandType::Triple),
             hand if hand.is_valid_straight() => Some(HandType::Straight),
+            hand if hand.is_valid_straight_of_pairs() => Some(HandType::StraightOfPairs),
             hand if hand.is_valid_full_house() => Some(HandType::FullHouse),
             _ => None,
         }
@@ -181,14 +184,15 @@ impl Hand {
     }
 
     fn is_valid_straight(&self) -> bool {
-        let num_phoenices = self
-            .0
-            .iter()
-            .filter(|card| match card {
-                Card::SpecialCard(SpecialCardType::Phoenix) => true,
-                _ => false,
-            })
-            .count();
+        if self.0.as_slice().windows(2).any(|pair| {
+            pair[0]
+                .numeric_value()
+                .zip(pair[1].numeric_value())
+                .map_or(false, |(left, right)| left == right)
+        }) {
+            return false;
+        }
+        let num_phoenices = self.num_phoenices();
         let num_phoenices_needed = self
             .0
             .as_slice()
@@ -204,6 +208,50 @@ impl Hand {
         self.0.len() >= 5 && num_phoenices >= num_phoenices_needed
     }
 
+    fn is_valid_straight_of_pairs(&self) -> bool {
+        let num_phoenices = self.num_phoenices();
+        let mut num_phoenices_needed = 0;
+        let first_value = self.0.iter().filter_map(|card| card.numeric_value()).next();
+        let last_value = self
+            .0
+            .iter()
+            .map(|card| card.numeric_value().unwrap())
+            .next_back();
+
+        let Some(first_value) = first_value else {
+            return false;
+        };
+        let Some(last_value) = last_value else {
+            return false;
+        };
+
+        const NUM_CARDS: usize = 2;
+
+        let num_cards_by_value = self
+            .0
+            .iter()
+            .group_by(|card| card.numeric_value())
+            .into_iter()
+            .filter(|(value, _)| value.is_some())
+            .filter_map(|(value, cards)| match cards.count() {
+                length if length > NUM_CARDS => None,
+                length => Some((value, length)),
+            })
+            .collect::<HashMap<_, _>>();
+
+        for value in first_value..=last_value {
+            let num_cards_for_current_value = num_cards_by_value
+                .get(&Some(value))
+                .unwrap_or(&(0 as usize));
+            if *num_cards_for_current_value > NUM_CARDS {
+                return false;
+            }
+            num_phoenices_needed += NUM_CARDS - num_cards_for_current_value;
+        }
+
+        num_phoenices >= num_phoenices_needed
+    }
+
     fn is_valid_full_house(&self) -> bool {
         match self.0.as_slice() {
             [Card::RegularCard(value1, _), Card::RegularCard(value2, _), Card::RegularCard(value3, _), Card::RegularCard(value4, _), Card::RegularCard(value5, _)] => {
@@ -216,6 +264,16 @@ impl Hand {
             }
             _ => false,
         }
+    }
+
+    fn num_phoenices(&self) -> usize {
+        self.0
+            .iter()
+            .filter(|card| match card {
+                Card::SpecialCard(SpecialCardType::Phoenix) => true,
+                _ => false,
+            })
+            .count()
     }
 }
 
@@ -309,4 +367,23 @@ fn main() {
         Card::SpecialCard(SpecialCardType::One),
     ]);
     println!("hand {:?} has type {:?}", hand5, hand5.hand_type());
+
+    let hand6 = Hand::new(vec![
+        Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Clubs),
+        Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Clubs),
+        Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Diamond),
+        Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Spade),
+    ]);
+    println!("hand {:?} has type {:?}", hand6, hand6.hand_type());
+
+    let hand7 = Hand::new(vec![
+        Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Clubs),
+        Card::RegularCard(RegularCardValue::Three, RegularCardSuite::Clubs),
+        Card::RegularCard(RegularCardValue::Three, RegularCardSuite::Diamond),
+        Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Spade),
+        Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Heart),
+    ]);
+    println!("hand {:?} has type {:?}", hand7, hand7.hand_type());
 }
