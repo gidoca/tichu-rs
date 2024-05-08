@@ -3,6 +3,12 @@ use itertools::Itertools;
 use rand::{seq::SliceRandom, SeedableRng};
 use std::collections::HashMap;
 
+fn iter_all_equal<T: PartialEq>(iter: impl IntoIterator<Item = T>) -> Option<T> {
+    let mut iter = iter.into_iter();
+    let first = iter.next()?;
+    iter.all(|elem| elem == first).then(|| first)
+}
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone, Sequence)]
 enum RegularCardValue {
     Two = 2,
@@ -98,10 +104,24 @@ impl Card {
         }
     }
 
+    fn value(&self) -> Option<RegularCardValue> {
+        match self {
+            Card::RegularCard(value, _) => Some(*value),
+            _ => None,
+        }
+    }
+
     fn numeric_value(&self) -> Option<usize> {
         match self {
             Card::SpecialCard(SpecialCardType::One) => Some(1),
             Card::RegularCard(value, _) => Some(value.numeric_value()),
+            _ => None,
+        }
+    }
+
+    fn suite(&self) -> Option<RegularCardSuite> {
+        match self {
+            Card::RegularCard(_, suite) => Some(*suite),
             _ => None,
         }
     }
@@ -126,6 +146,8 @@ enum HandType {
     Straight,
     StraightOfPairs,
     FullHouse,
+    QuadrupleBomb,
+    StraightBomb,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -143,6 +165,8 @@ impl Hand {
         }
 
         match self {
+            hand if hand.is_valid_quadruple_bomb() => Some(HandType::QuadrupleBomb),
+            hand if hand.is_valid_straight_bomb() => Some(HandType::StraightBomb),
             hand if hand.is_valid_single_card() => Some(HandType::SingleCard),
             hand if hand.is_valid_pair() => Some(HandType::Pair),
             hand if hand.is_valid_triple() => Some(HandType::Triple),
@@ -153,14 +177,29 @@ impl Hand {
         }
     }
 
+    fn is_valid_quadruple_bomb(&self) -> bool {
+        match self.0.as_slice() {
+            [Card::RegularCard(_, _), Card::RegularCard(_, _), Card::RegularCard(_, _), Card::RegularCard(_, _)] => {
+                iter_all_equal(self.0.iter().map(|card| card.value())).is_some()
+            }
+            _ => false,
+        }
+    }
+
+    fn is_valid_straight_bomb(&self) -> bool {
+        self.is_valid_straight()
+            && self.num_phoenices() == 0
+            && iter_all_equal(self.0.iter().map(|card| card.suite())).is_some()
+    }
+
     fn is_valid_single_card(&self) -> bool {
         self.0.len() == 1
     }
 
     fn is_valid_pair(&self) -> bool {
         match self.0.as_slice() {
-            [Card::RegularCard(value1, _), Card::RegularCard(value2, _)] if value1 == value2 => {
-                true
+            [Card::RegularCard(_, _), Card::RegularCard(_, _)] => {
+                iter_all_equal(self.0.iter().map(|card| card.value())).is_some()
             }
             [Card::SpecialCard(SpecialCardType::Phoenix), Card::RegularCard(_, _)] => true,
             _ => false,
@@ -284,7 +323,9 @@ impl Hand {
                 | HandType::Pair
                 | HandType::Triple
                 | HandType::Straight
-                | HandType::StraightOfPairs => self.0.iter().next_back().unwrap(),
+                | HandType::StraightOfPairs
+                | HandType::QuadrupleBomb
+                | HandType::StraightBomb => self.0.iter().next_back().unwrap(),
                 HandType::FullHouse => match self.0[0] {
                     Card::RegularCard(_, _) => &self.0[2],
                     Card::SpecialCard(SpecialCardType::Phoenix) => &self.0[3],
@@ -416,4 +457,12 @@ fn main() {
         Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Heart),
     ]);
     print_hand(&hand7);
+
+    let hand8 = Hand::new(vec![
+        Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Heart),
+        Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Clubs),
+        Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Diamond),
+        Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Spade),
+    ]);
+    print_hand(&hand8);
 }
