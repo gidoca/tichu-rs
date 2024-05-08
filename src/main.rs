@@ -258,9 +258,10 @@ impl Hand {
                 value1 == value2 && value4 == value5 && (value3 == value2 || value3 == value4)
             }
             [Card::SpecialCard(SpecialCardType::Phoenix), Card::RegularCard(value1, _), Card::RegularCard(value2, _), Card::RegularCard(value3, _), Card::RegularCard(value4, _)] => {
-                (value1 == value2 && value2 == value3)
+                ((value1 == value2 && value2 == value3)
                     || (value1 == value2 && value3 == value4)
-                    || (value2 == value3 && value3 == value4)
+                    || (value2 == value3 && value3 == value4))
+                    && value1 != value4
             }
             _ => false,
         }
@@ -274,6 +275,26 @@ impl Hand {
                 _ => false,
             })
             .count()
+    }
+
+    fn relevant_card_value(&self) -> Option<RegularCardValue> {
+        self.hand_type()
+            .map(|hand_type| match hand_type {
+                HandType::SingleCard
+                | HandType::Pair
+                | HandType::Triple
+                | HandType::Straight
+                | HandType::StraightOfPairs => self.0.iter().next_back().unwrap(),
+                HandType::FullHouse => match self.0[0] {
+                    Card::RegularCard(_, _) => &self.0[2],
+                    Card::SpecialCard(SpecialCardType::Phoenix) => &self.0[3],
+                    _ => panic!(),
+                },
+            })
+            .map(|card| match card {
+                Card::RegularCard(value, _) => *value,
+                _ => panic!(),
+            })
     }
 }
 
@@ -298,6 +319,15 @@ impl Deck {
         cards.sort_unstable();
         PlayerHand(cards)
     }
+}
+
+fn print_hand(hand: &Hand) {
+    println!(
+        "hand {:?} has type {:?} at relevant value {:?}",
+        hand,
+        hand.hand_type(),
+        hand.relevant_card_value()
+    );
 }
 
 fn main() {
@@ -330,7 +360,7 @@ fn main() {
     println!("{:?} scores {:?} points", card1, card1.score());
 
     let hand = Hand(vec![card1]);
-    println!("hand {:?} has type {:?}", hand, hand.hand_type());
+    print_hand(&hand);
 
     let hand2 = Hand::new(vec![
         Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Heart),
@@ -339,7 +369,7 @@ fn main() {
         Card::RegularCard(RegularCardValue::Five, RegularCardSuite::Heart),
         Card::RegularCard(RegularCardValue::Six, RegularCardSuite::Heart),
     ]);
-    println!("hand {:?} has type {:?}", hand2, hand2.hand_type());
+    print_hand(&hand2);
 
     let hand3 = Hand::new(vec![
         Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Heart),
@@ -348,7 +378,7 @@ fn main() {
         Card::RegularCard(RegularCardValue::Five, RegularCardSuite::Heart),
         Card::RegularCard(RegularCardValue::Seven, RegularCardSuite::Heart),
     ]);
-    println!("hand {:?} has type {:?}", hand3, hand3.hand_type());
+    print_hand(&hand3);
 
     let hand4 = Hand::new(vec![
         Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Heart),
@@ -357,7 +387,7 @@ fn main() {
         Card::RegularCard(RegularCardValue::Six, RegularCardSuite::Heart),
         Card::SpecialCard(SpecialCardType::Phoenix),
     ]);
-    println!("hand {:?} has type {:?}", hand4, hand4.hand_type());
+    print_hand(&hand4);
 
     let hand5 = Hand::new(vec![
         Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Heart),
@@ -366,16 +396,16 @@ fn main() {
         Card::RegularCard(RegularCardValue::Five, RegularCardSuite::Heart),
         Card::SpecialCard(SpecialCardType::One),
     ]);
-    println!("hand {:?} has type {:?}", hand5, hand5.hand_type());
+    print_hand(&hand5);
 
     let hand6 = Hand::new(vec![
         Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Heart),
         Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Clubs),
-        Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Clubs),
+        Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Clubs),
         Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Diamond),
         Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Spade),
     ]);
-    println!("hand {:?} has type {:?}", hand6, hand6.hand_type());
+    print_hand(&hand6);
 
     let hand7 = Hand::new(vec![
         Card::RegularCard(RegularCardValue::Two, RegularCardSuite::Heart),
@@ -385,5 +415,5 @@ fn main() {
         Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Spade),
         Card::RegularCard(RegularCardValue::Four, RegularCardSuite::Heart),
     ]);
-    println!("hand {:?} has type {:?}", hand7, hand7.hand_type());
+    print_hand(&hand7);
 }
