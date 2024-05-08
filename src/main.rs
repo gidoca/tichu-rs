@@ -48,7 +48,7 @@ enum SpecialCardType {
     Dog,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone, Sequence)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Sequence)]
 enum Card {
     SpecialCard(SpecialCardType),
     RegularCard(RegularCardValue, RegularCardSuite),
@@ -336,6 +336,33 @@ impl Hand {
                 Card::RegularCard(value, _) => *value,
                 _ => panic!(),
             })
+    }
+
+    fn is_bomb(&self) -> bool {
+        match self.hand_type() {
+            Some(HandType::StraightBomb) | Some(HandType::QuadrupleBomb) => true,
+            _ => false,
+        }
+    }
+
+    fn higher_value_than(&self, other: &Hand) -> bool {
+        self.relevant_card_value()
+            .zip(other.relevant_card_value())
+            .map(|(self_value, other_value)| self_value > other_value)
+            .unwrap_or(false)
+    }
+
+    fn can_be_played_on(&self, other: &Hand) -> bool {
+        if self.is_bomb() {
+            if other.is_bomb() {
+                self.0.len() > other.0.len()
+                    || (self.0.len() == other.0.len() && self.higher_value_than(other))
+            } else {
+                true
+            }
+        } else {
+            self.0.len() == other.0.len() && self.higher_value_than(other)
+        }
     }
 }
 
