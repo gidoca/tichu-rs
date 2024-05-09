@@ -361,7 +361,9 @@ impl Hand {
                 true
             }
         } else {
-            self.0.len() == other.0.len() && self.higher_value_than(other)
+            self.hand_type() == other.hand_type()
+                && self.0.len() == other.0.len()
+                && self.higher_value_than(other)
         }
     }
 }
