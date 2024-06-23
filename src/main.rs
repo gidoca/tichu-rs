@@ -1,36 +1,13 @@
 mod card;
 mod hand;
+mod game;
 mod util;
-
-use enum_iterator::all;
-
-use rand::{seq::SliceRandom, SeedableRng};
 
 use card::*;
 use hand::*;
+use game::*;
 
-#[derive(PartialEq, Eq, Debug)]
-struct PlayerHand(Vec<Card>);
-
-#[derive(PartialEq, Eq, Debug)]
-struct Deck(Vec<Card>);
-
-const NUM_CARDS_PER_PLAYER: usize = 14;
-const NUM_PLAYERS: usize = 4;
-
-impl Deck {
-    fn new<R: rand::RngCore>(rng: &mut R) -> Deck {
-        let mut cards = all::<Card>().collect::<Vec<_>>();
-        cards.as_mut_slice().shuffle(rng);
-        Deck(cards)
-    }
-
-    fn deal(&mut self) -> PlayerHand {
-        let mut cards = self.0.split_off(self.0.len() - NUM_CARDS_PER_PLAYER);
-        cards.sort_unstable();
-        PlayerHand(cards)
-    }
-}
+use rand::SeedableRng;
 
 fn print_hand(hand: &Hand) {
     println!(
