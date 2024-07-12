@@ -139,7 +139,7 @@ impl Hand {
         let num_cards_by_value = self
             .0
             .iter()
-            .group_by(|card| card.numeric_value())
+            .chunk_by(|card| card.numeric_value())
             .into_iter()
             .filter(|(value, _)| value.is_some())
             .filter_map(|(value, cards)| match cards.count() {
